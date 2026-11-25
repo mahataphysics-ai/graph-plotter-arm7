@@ -41,13 +41,7 @@ class MainActivity : AppCompatActivity() {
     private var gridEnabled = true
     private var isScatterMode = false
 
-    private val palette = listOf(
-        Color.BLUE,
-        Color.rgb(0, 150, 0),
-        Color.MAGENTA,
-        Color.rgb(255, 120, 0),
-        Color.CYAN
-    )
+    private val palette = listOf(Color.BLUE, Color.rgb(0, 150, 0), Color.MAGENTA, Color.rgb(255, 120, 0), Color.CYAN)
 
     private val csvPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { loadCsvFromUri(it) }
@@ -66,9 +60,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnPlot).setOnClickListener { plotAll() }
         findViewById<Button>(R.id.btnCsv).setOnClickListener { csvPicker.launch("*/*") }
         findViewById<Button>(R.id.btnSave).setOnClickListener { saveChartImage() }
-
-        findViewById<Button>(R.id.btnXRange).setOnClickListener { showXRangeDialog() }
-        findViewById<Button>(R.id.btnYRange).setOnClickListener { showYRangeDialog() }
+        findViewById<Button>(R.id.btnXRange).setOnClickListener { showRangeDialog(true) }
+        findViewById<Button>(R.id.btnYRange).setOnClickListener { showRangeDialog(false) }
         findViewById<Button>(R.id.btnLabels).setOnClickListener { showLabelsDialog() }
 
         val btnGrid = findViewById<Button>(R.id.btnGrid)
@@ -85,193 +78,144 @@ class MainActivity : AppCompatActivity() {
             plotAll()
         }
 
-        setupChartDefaults()
-        plotAll()
-    }
-
-    private fun setupChartDefaults() {
         lineChart.setBackgroundColor(Color.WHITE)
         lineChart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         lineChart.axisRight.isEnabled = false
         lineChart.description.isEnabled = false
+        plotAll()
     }
 
-    private fun showXRangeDialog() {
+    private fun showRangeDialog(isX: Boolean) {
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(40, 20, 40, 10)
         }
         val inputMin = EditText(this).apply {
-            hint = "Min X"
-            setText(minX.toString())
+            hint = if (isX) "Min X" else "Min Y (blank = Auto)"
+            setText(if (isX) minX.toString() else (minY?.toString() ?: ""))
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
         val inputMax = EditText(this).apply {
-            hint = "Max X"
-            setText(maxX.toString())
+            hint = if (isX) "Max X" else "Max Y (blank = Auto)"
+            setText(if (isX) maxX.toString() else (maxY?.toString() ?: ""))
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
         layout.addView(inputMin)
         layout.addView(inputMax)
 
         AlertDialog.Builder(this)
-            .setTitle("Set X Axis Range")
+            .setTitle(if (isX) "Set X Range" else "Set Y Range")
             .setView(layout)
             .setPositiveButton("Apply") { _, _ ->
-                val newMin = inputMin.text.toString().toDoubleOrNull()
-                val newMax = inputMax.text.toString().toDoubleOrNull()
-                if (newMin != null && newMax != null && newMin < newMax) {
-                    minX = newMin
-                    maxX = newMax
+                val a = inputMin.text.toString().toDoubleOrNull()
+                val b = inputMax.text.toString().toDoubleOrNull()
+                if (isX) {
+                    if (a != null && b != null && a < b) { minX = a; maxX = b; plotAll() }
+                    else Toast.makeText(this, "Invalid X range", Toast.LENGTH_SHORT).show()
+                } else {
+                    if (a != null && b != null && a < b) { minY = a.toFloat(); maxY = b.toFloat() }
+                    else { minY = null; maxY = null }
                     plotAll()
-                } else {
-                    Toast.makeText(this, "Invalid X range", Toast.LENGTH_SHORT).show()
                 }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun showYRangeDialog() {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 20, 40, 10)
-        }
-        val inputMin = EditText(this).apply {
-            hint = "Min Y (leave blank for Auto)"
-            setText(minY?.toString() ?: "")
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
-        val inputMax = EditText(this).apply {
-            hint = "Max Y (leave blank for Auto)"
-            setText(maxY?.toString() ?: "")
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
-        layout.addView(inputMin)
-        layout.addView(inputMax)
-
-        AlertDialog.Builder(this)
-            .setTitle("Set Y Axis Range")
-            .setView(layout)
-            .setPositiveButton("Apply") { _, _ ->
-                val newMin = inputMin.text.toString().toFloatOrNull()
-                val newMax = inputMax.text.toString().toFloatOrNull()
-                if (newMin != null && newMax != null && newMin < newMax) {
-                    minY = newMin
-                    maxY = newMax
-                } else {
-                    minY = null
-                    maxY = null
-                }
-                plotAll()
-            }
-            .setNeutralButton("Auto Scale") { _, _ ->
-                minY = null
-                maxY = null
-                plotAll()
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun showLabelsDialog() {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 20, 40, 10)
-        }
-        val inputX = EditText(this).apply {
-            hint = "X Axis Label"
-            setText(tvXLabel.text.toString())
-        }
-        val inputY = EditText(this).apply {
-            hint = "Y Axis Label"
-            setText(tvYLabel.text.toString())
-        }
-        layout.addView(inputX)
-        layout.addView(inputY)
-
-        AlertDialog.Builder(this)
-            .setTitle("Set Axis Labels")
-            .setView(layout)
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 20, 40, 10) }
+        val inputX = EditText(this).apply { hint = "X Label"; setText(tvXLabel.text.toString()) }
+        val inputY = EditText(this).apply { hint = "Y Label"; setText(tvYLabel.text.toString()) }
+        layout.addView(inputX); layout.addView(inputY)
+        AlertDialog.Builder(this).setTitle("Set Axis Labels").setView(layout)
             .setPositiveButton("Apply") { _, _ ->
                 tvXLabel.text = inputX.text.toString().ifBlank { "X" }
                 tvYLabel.text = inputY.text.toString().ifBlank { "Y" }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun plotAll() {
         val dataSets = mutableListOf<LineDataSet>()
         val step = (maxX - minX) / 200.0
-
-        val funcs = etFunctions.text.toString().split(";").map { it.trim() }.filter { it.isNotEmpty() }
-        funcs.forEachIndexed { index, eq ->
+        etFunctions.text.toString().split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEachIndexed { idx, eq ->
             try {
-                val entries = generateFunctionEntries(eq, minX, maxX, step)
-                val lineColor = palette.get(index % palette.size)
-                dataSets.add(LineDataSet(entries, "f${index + 1}(x) = $eq").apply {
-                    color = lineColor
-                    setDrawCircles(false)
-                    lineWidth = 2.2f
+                val entries = mutableListOf<Entry>()
+                val expr = ExpressionBuilder(eq).variable("x").build()
+                var x = minX
+                while (x <= maxX) {
+                    try {
+                        val y = expr.setVariable("x", x).evaluate()
+                        if (!y.isNaN() && !y.isInfinite()) entries.add(Entry(x.toFloat(), y.toFloat()))
+                    } catch (_: Exception) {}
+                    x += step
+                }
+                dataSets.add(LineDataSet(entries, "f${idx + 1}(x)=$eq").apply {
+                    color = palette.get(idx % palette.size); setDrawCircles(false); lineWidth = 2.2f
                 })
-            } catch (e: Exception) {
-                Toast.makeText(this, "Invalid equation: $eq", Toast.LENGTH_SHORT).show()
-            }
+            } catch (_: Exception) { Toast.makeText(this, "Invalid: $eq", Toast.LENGTH_SHORT).show() }
         }
 
-        val pointsText = etDataPoints.text.toString().trim()
-        if (pointsText.isNotEmpty()) {
-            val entries = parseDataPoints(pointsText)
-            if (entries.isNotEmpty()) {
-                val label = if (isScatterMode) "Data (Scatter)" else "Data (Line)"
-                dataSets.add(LineDataSet(entries, label).apply {
-                    color = if (isScatterMode) Color.TRANSPARENT else Color.RED
-                    setCircleColor(Color.RED)
-                    setDrawCircles(true)
-                    circleRadius = if (isScatterMode) 5.5f else 4.5f
-                    lineWidth = if (isScatterMode) 0f else 1.8f
-                })
-            }
+        val entries = etDataPoints.text.toString().split(";").mapNotNull { pair ->
+            val parts = pair.trim().split(",")
+            val x = parts.firstOrNull()?.trim()?.toFloatOrNull()
+            val y = parts.getOrNull(1)?.trim()?.toFloatOrNull()
+            if (x != null && y != null) Entry(x, y) else null
+        }.sortedBy { it.x }
+
+        if (entries.isNotEmpty()) {
+            dataSets.add(LineDataSet(entries, if (isScatterMode) "CSV (Scatter)" else "CSV (Line)").apply {
+                color = if (isScatterMode) Color.TRANSPARENT else Color.RED
+                setCircleColor(Color.RED); setDrawCircles(true)
+                circleRadius = if (isScatterMode) 5.5f else 4.5f
+                lineWidth = if (isScatterMode) 0f else 1.8f
+            })
         }
 
         lineChart.xAxis.setDrawGridLines(gridEnabled)
         lineChart.axisLeft.setDrawGridLines(gridEnabled)
-
         lineChart.xAxis.axisMinimum = minX.toFloat()
         lineChart.xAxis.axisMaximum = maxX.toFloat()
-
         if (minY != null && maxY != null) {
-            lineChart.axisLeft.axisMinimum = minY!!
-            lineChart.axisLeft.axisMaximum = maxY!!
+            lineChart.axisLeft.axisMinimum = minY!!; lineChart.axisLeft.axisMaximum = maxY!!
         } else {
-            lineChart.axisLeft.resetAxisMinimum()
-            lineChart.axisLeft.resetAxisMaximum()
+            lineChart.axisLeft.resetAxisMinimum(); lineChart.axisLeft.resetAxisMaximum()
         }
-
         lineChart.data = LineData(dataSets.toList())
         lineChart.invalidate()
     }
 
-    private fun generateFunctionEntries(eq: String, minX: Double, maxX: Double, step: Double): List<Entry> {
-        val entries = mutableListOf<Entry>()
-        val expression = ExpressionBuilder(eq).variable("x").build()
-        var x = minX
-        while (x <= maxX) {
-            try {
-                val y = expression.setVariable("x", x).evaluate()
-                if (!y.isNaN() && !y.isInfinite()) {
+    private fun loadCsvFromUri(uri: Uri) {
+        try {
+            val pairs = mutableListOf<String>()
+            contentResolver.openInputStream(uri)?.use { stream ->
+                BufferedReader(InputStreamReader(stream)).forEachLine { line ->
+                    val cols = line.split(",")
+                    val x = cols.firstOrNull()?.trim()?.toFloatOrNull()
+                    val y = cols.getOrNull(1)?.trim()?.toFloatOrNull()
+                    if (x != null && y != null) pairs.add("$x,$y")
+                }
+            }
+            if (pairs.isNotEmpty()) {
+                etDataPoints.setText(pairs.joinToString("; "))
+                plotAll()
+                Toast.makeText(this, "Loaded ${pairs.size} CSV points", Toast.LENGTH_SHORT).show()
+            }
+        } catch (_: Exception) { Toast.makeText(this, "CSV read failed", Toast.LENGTH_SHORT).show() }
+    }
 
-
-
-if (uri != null) {
-contentResolver.openOutputStream(uri)?.use { out ->
-bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-}
-Toast.makeText(this, "Saved to Pictures/$filename", Toast.LENGTH_LONG).show()
-}
-} catch (e: Exception) {
-Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
-}
-}
+    private fun saveChartImage() {
+        try {
+            val bitmap = lineChart.chartBitmap
+            val filename = "graph_${System.currentTimeMillis()}.png"
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            }
+            contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
+                contentResolver.openOutputStream(uri)?.use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
+                Toast.makeText(this, "Saved to Pictures/$filename", Toast.LENGTH_LONG).show()
+            }
+        } catch (e: Exception) { Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show() }
+    }
 }
