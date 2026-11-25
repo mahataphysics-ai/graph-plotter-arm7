@@ -6,12 +6,37 @@
     android:padding="12dp">
 
     <EditText
-        android:id="@+id/etFunction"
+        android:id="@+id/etFunctions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Function f(x), e.g. sin(x)*5"
-        android:text="sin(x)*5"
+        android:hint="Functions (; second), e.g. sin(x)*5; cos(x)*3"
+        android:text="sin(x)*5; cos(x)*3"
         android:inputType="text" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etMinX"
+            android:layout_width="0pp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Min X"
+            android:text="-10"
+            android:inputType="numberSigned|numberDecimal" />
+
+        <EditText
+            android:lines="1"
+            android:id="@+id/etMaxX"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Max X"
+            android:text="10"
+            android:inputType="numberSigned|numberDecimal" />
+    </LinearLayout>
 
     <EditText
         android:id="@+id/etDataPoints"
@@ -21,11 +46,32 @@
         android:text="-6,2; -2,-3; 1,4; 5,1"
         android:inputType="text" />
 
-    <Button
-        android:id="@+id/btnPlot"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Plot Graph" />
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnPlot"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Plot" />
+
+        <Button
+            android:id="@+id/btnCsv"
+            android:layout_width="0pp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="CSV" />
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Save PNG" />
+    </LinearLayout>
 
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/lineChart"
