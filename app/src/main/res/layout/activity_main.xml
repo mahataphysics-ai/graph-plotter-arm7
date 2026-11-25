@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://android.com"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <EditText
+        android:id="@+id/etFunction"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Function f(x), e.g. sin(x)*5"
+        android:text="sin(x)*5"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/etDataPoints"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Points x,y; e.g. -5,2; 0,0; 4,3"
+        android:text="-6,2; -2,-3; 1,4; 5,1"
+        android:inputType="text" />
+
+    <Button
+        android:id="@+id/btnPlot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Plot Graph" />
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/lineChart"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp" />
+</LinearLayout>
