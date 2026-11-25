@@ -127,8 +127,8 @@ class MainActivity : AppCompatActivity() {
         return input.split(";").mapNotNull { pair ->
             val parts = pair.trim().split(",")
             if (parts.size == 2) {
-                val x = parts.trim().toFloatOrNull()
-                val y = parts.trim().toFloatOrNull()
+                val x = parts[0].trim().toFloatOrNull()
+                val y = parts[1].trim().toFloatOrNull()
                 if (x != null && y != null) Entry(x, y) else null
             } else null
         }.sortedBy { it.x }
@@ -141,8 +141,8 @@ class MainActivity : AppCompatActivity() {
                 BufferedReader(InputStreamReader(stream)).forEachLine { line ->
                     val cols = line.split(",")
                     if (cols.size >= 2) {
-                        val x = cols.trim().toFloatOrNull()
-                        val y = cols.trim().toFloatOrNull()
+                        val x = cols[0].trim().toFloatOrNull()
+                        val y = cols[1].trim().toFloatOrNull()
                         if (x != null && y != null) {
                             parsedPairs.add("$x,$y")
                         }
