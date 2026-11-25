@@ -20,7 +20,7 @@
 
         <EditText
             android:id="@+id/etMinX"
-            android:layout_width="0pp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Min X"
@@ -60,7 +60,7 @@
 
         <Button
             android:id="@+id/btnCsv"
-            android:layout_width="0pp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="CSV" />
