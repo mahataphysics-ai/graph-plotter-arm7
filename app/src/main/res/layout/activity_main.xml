@@ -19,7 +19,7 @@
         android:layout_marginTop="6dp">
 
         <ScrollView
-            android:layout_width="0pp"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1.7"
             android:paddingRight="6dp">
@@ -54,7 +54,7 @@
 
                     <Button
                         android:id="@+id/btnPlot"
-                        android:layout_width="0pp"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="Plot"
