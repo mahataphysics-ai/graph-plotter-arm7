@@ -5,41 +5,12 @@
     android:orientation="vertical"
     android:padding="8dp">
 
-    <!-- TOP: Plot Window -->
-    <RelativeLayout
+    <com.example.graphplotter.ScientificLineChart
+        android:id="@+id/lineChart"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1.3">
+        android:layout_weight="1.35" />
 
-        <TextView
-            android:id="@+id/tvYLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentLeft="true"
-            android:text="Y: y"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvXLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_centerHorizontal="true"
-            android:text="X: x"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/lineChart"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@+id/tvYLabel"
-            android:layout_above="@+id/tvXLabel" />
-    </RelativeLayout>
-
-    <!-- BOTTOM: Inputs (Left) + Scrollable Right Menu Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -47,11 +18,10 @@
         android:orientation="horizontal"
         android:layout_marginTop="6dp">
 
-        <!-- Left Column: Functions & Data -->
         <ScrollView
-            android:layout_width="0dp"
+            android:layout_width="0pp"
             android:layout_height="match_parent"
-            android:layout_weight="1.6"
+            android:layout_weight="1.7"
             android:paddingRight="6dp">
 
             <LinearLayout
@@ -63,25 +33,19 @@
                     android:id="@+id/etFunctions"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Functions (;) e.g. sin(x)*5; x^2/5"
+                    android:hint="Functions (; second)"
                     android:text="sin(x)*5"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:inputType="text" />
 
                 <EditText
                     android:id="@+id/etDataPoints"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Data x,y; e.g. -5,2; 0,0; 4,3"
+                    android:hint="Data x,y; e.g. -5,2; 0,0"
                     android:text="-6,2; -2,-3; 1,4; 5,1"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:inputType="text" />
-
-                <Button
-                    android:id="@+id/btnPlot"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Plot Graph" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -89,31 +53,46 @@
                     android:orientation="horizontal">
 
                     <Button
+                        android:id="@+id/btnPlot"
+                        android:layout_width="0pp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Plot"
+                        android:textSize="11sp" />
+
+                    <Button
                         android:id="@+id/btnCsv"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Import CSV"
-                        android:textSize="12sp" />
+                        android:text="CSV"
+                        android:textSize="11sp" />
 
                     <Button
                         android:id="@+id/btnSave"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Save PNG"
-                        android:textSize="12sp" />
+                        android:text="Export"
+                        android:textSize="11sp" />
                 </LinearLayout>
+
+                <TableLayout
+                    android:id="@+id/tblCsvData"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:stretchColumns="*" />
             </LinearLayout>
         </ScrollView>
 
-        <!-- Right Side: Scrollable Menu Bar -->
         <ScrollView
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:background="#F0F4F8"
             android:padding="4dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -126,6 +105,13 @@
                     android:text="MENU"
                     android:textSize="11sp"
                     android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Title"
+                    android:textSize="11sp" />
 
                 <Button
                     android:id="@+id/btnXRange"

@@ -10,14 +10,16 @@ import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.InputType
+import android.view.Gravity
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TableLayout
+import android.widget.TableRow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -25,14 +27,14 @@ import com.github.mikephil.charting.data.LineDataSet
 import net.objecthunter.exp4j.ExpressionBuilder
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var lineChart: LineChart
+    private lateinit var lineChart: ScientificLineChart
     private lateinit var etFunctions: EditText
     private lateinit var etDataPoints: EditText
-    private lateinit var tvXLabel: TextView
-    private lateinit var tvYLabel: TextView
+    private lateinit var tblCsvData: TableLayout
 
     private var minX = -10.0
     private var maxX = 10.0
@@ -40,6 +42,8 @@ class MainActivity : AppCompatActivity() {
     private var maxY: Float? = null
     private var gridEnabled = true
     private var isScatterMode = false
+    private var lastFuncSets: List<List<Entry>> = emptyList()
+    private var lastDataEntries: List<Entry> = emptyList()
 
     private val palette = listOf(Color.BLUE, Color.rgb(0, 150, 0), Color.MAGENTA, Color.rgb(255, 120, 0), Color.CYAN)
 
@@ -54,12 +58,12 @@ class MainActivity : AppCompatActivity() {
         lineChart = findViewById(R.id.lineChart)
         etFunctions = findViewById(R.id.etFunctions)
         etDataPoints = findViewById(R.id.etDataPoints)
-        tvXLabel = findViewById(R.id.tvXLabel)
-        tvYLabel = findViewById(R.id.tvYLabel)
+        tblCsvData = findViewById(R.id.tblCsvData)
 
         findViewById<Button>(R.id.btnPlot).setOnClickListener { plotAll() }
         findViewById<Button>(R.id.btnCsv).setOnClickListener { csvPicker.launch("*/*") }
-        findViewById<Button>(R.id.btnSave).setOnClickListener { saveChartImage() }
+        findViewById<Button>(R.id.btnSave).setOnClickListener { showExportDialog() }
+        findViewById<Button>(R.id.btnTitle).setOnClickListener { showTitleDialog() }
         findViewById<Button>(R.id.btnXRange).setOnClickListener { showRangeDialog(true) }
         findViewById<Button>(R.id.btnYRange).setOnClickListener { showRangeDialog(false) }
         findViewById<Button>(R.id.btnLabels).setOnClickListener { showLabelsDialog() }
@@ -80,16 +84,22 @@ class MainActivity : AppCompatActivity() {
 
         lineChart.setBackgroundColor(Color.WHITE)
         lineChart.xAxis.position = XAxis.XAxisPosition.BOTTOM
-        lineChart.axisRight.isEnabled = false
+        lineChart.axisRight.isEnabled = true
+        lineChart.axisRight.setDrawLabels(false)
+        lineChart.axisRight.setDrawGridLines(false)
         lineChart.description.isEnabled = false
         plotAll()
     }
 
+    private fun showTitleDialog() {
+        val input = EditText(this).apply { hint = "Graph Title"; setText(lineChart.chartTitle) }
+        AlertDialog.Builder(this).setTitle("Set Graph Title").setView(input)
+            .setPositiveButton("Apply") { _, _ -> lineChart.chartTitle = input.text.toString(); lineChart.invalidate() }
+            .setNegativeButton("Cancel", null).show()
+    }
+
     private fun showRangeDialog(isX: Boolean) {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(40, 20, 40, 10)
-        }
+        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 20, 40, 10) }
         val inputMin = EditText(this).apply {
             hint = if (isX) "Min X" else "Min Y (blank = Auto)"
             setText(if (isX) minX.toString() else (minY?.toString() ?: ""))
@@ -100,42 +110,33 @@ class MainActivity : AppCompatActivity() {
             setText(if (isX) maxX.toString() else (maxY?.toString() ?: ""))
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
         }
-        layout.addView(inputMin)
-        layout.addView(inputMax)
-
-        AlertDialog.Builder(this)
-            .setTitle(if (isX) "Set X Range" else "Set Y Range")
-            .setView(layout)
+        layout.addView(inputMin); layout.addView(inputMax)
+        AlertDialog.Builder(this).setTitle(if (isX) "Set X Range" else "Set Y Range").setView(layout)
             .setPositiveButton("Apply") { _, _ ->
                 val a = inputMin.text.toString().toDoubleOrNull()
                 val b = inputMax.text.toString().toDoubleOrNull()
-                if (isX) {
-                    if (a != null && b != null && a < b) { minX = a; maxX = b; plotAll() }
-                    else Toast.makeText(this, "Invalid X range", Toast.LENGTH_SHORT).show()
-                } else {
-                    if (a != null && b != null && a < b) { minY = a.toFloat(); maxY = b.toFloat() }
-                    else { minY = null; maxY = null }
-                    plotAll()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+                if (isX && a != null && b != null && a < b) { minX = a; maxX = b }
+                else if (!isX) { minY = a?.toFloat(); maxY = b?.toFloat() }
+                plotAll()
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun showLabelsDialog() {
         val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 20, 40, 10) }
-        val inputX = EditText(this).apply { hint = "X Label"; setText(tvXLabel.text.toString()) }
-        val inputY = EditText(this).apply { hint = "Y Label"; setText(tvYLabel.text.toString()) }
+        val inputX = EditText(this).apply { hint = "X Label"; setText(lineChart.xAxisTitle) }
+        val inputY = EditText(this).apply { hint = "Y Label"; setText(lineChart.yAxisTitle) }
         layout.addView(inputX); layout.addView(inputY)
         AlertDialog.Builder(this).setTitle("Set Axis Labels").setView(layout)
             .setPositiveButton("Apply") { _, _ ->
-                tvXLabel.text = inputX.text.toString().ifBlank { "X" }
-                tvYLabel.text = inputY.text.toString().ifBlank { "Y" }
+                lineChart.xAxisTitle = inputX.text.toString()
+                lineChart.yAxisTitle = inputY.text.toString()
+                lineChart.invalidate()
             }.setNegativeButton("Cancel", null).show()
     }
 
     private fun plotAll() {
         val dataSets = mutableListOf<LineDataSet>()
+        val funcLists = mutableListOf<List<Entry>>()
         val step = (maxX - minX) / 200.0
         etFunctions.text.toString().split(";").map { it.trim() }.filter { it.isNotEmpty() }.forEachIndexed { idx, eq ->
             try {
@@ -149,11 +150,13 @@ class MainActivity : AppCompatActivity() {
                     } catch (_: Exception) {}
                     x += step
                 }
+                funcLists.add(entries)
                 dataSets.add(LineDataSet(entries, "f${idx + 1}(x)=$eq").apply {
                     color = palette.get(idx % palette.size); setDrawCircles(false); lineWidth = 2.2f
                 })
             } catch (_: Exception) { Toast.makeText(this, "Invalid: $eq", Toast.LENGTH_SHORT).show() }
         }
+        lastFuncSets = funcLists
 
         val entries = etDataPoints.text.toString().split(";").mapNotNull { pair ->
             val parts = pair.trim().split(",")
@@ -161,9 +164,11 @@ class MainActivity : AppCompatActivity() {
             val y = parts.getOrNull(1)?.trim()?.toFloatOrNull()
             if (x != null && y != null) Entry(x, y) else null
         }.sortedBy { it.x }
+        lastDataEntries = entries
+        updateCsvTable(entries)
 
         if (entries.isNotEmpty()) {
-            dataSets.add(LineDataSet(entries, if (isScatterMode) "CSV (Scatter)" else "CSV (Line)").apply {
+            dataSets.add(LineDataSet(entries, if (isScatterMode) "Data (Scatter)" else "Data (Line)").apply {
                 color = if (isScatterMode) Color.TRANSPARENT else Color.RED
                 setCircleColor(Color.RED); setDrawCircles(true)
                 circleRadius = if (isScatterMode) 5.5f else 4.5f
@@ -184,6 +189,27 @@ class MainActivity : AppCompatActivity() {
         lineChart.invalidate()
     }
 
+    private fun updateCsvTable(entries: List<Entry>) {
+        tblCsvData.removeAllViews()
+        if (entries.isEmpty()) return
+        val header = TableRow(this).apply { setBackgroundColor(Color.LTGRAY) }
+        listOf("X", "Y").forEach { col ->
+            header.addView(TextView(this).apply {
+                text = col; gravity = Gravity.CENTER; setPadding(8, 6, 8, 6); textSize = 12f
+            })
+        }
+        tblCsvData.addView(header)
+        entries.forEach { e ->
+            val row = TableRow(this)
+            listOf(e.x.toString(), e.y.toString()).forEach { valStr ->
+                row.addView(TextView(this).apply {
+                    text = valStr; gravity = Gravity.CENTER; setPadding(8, 4, 8, 4); textSize = 12f
+                })
+            }
+            tblCsvData.addView(row)
+        }
+    }
+
     private fun loadCsvFromUri(uri: Uri) {
         try {
             val pairs = mutableListOf<String>()
@@ -195,17 +221,19 @@ class MainActivity : AppCompatActivity() {
                     if (x != null && y != null) pairs.add("$x,$y")
                 }
             }
-            if (pairs.isNotEmpty()) {
-                etDataPoints.setText(pairs.joinToString("; "))
-                plotAll()
-                Toast.makeText(this, "Loaded ${pairs.size} CSV points", Toast.LENGTH_SHORT).show()
-            }
+            if (pairs.isNotEmpty()) { etDataPoints.setText(pairs.joinToString("; ")); plotAll() }
         } catch (_: Exception) { Toast.makeText(this, "CSV read failed", Toast.LENGTH_SHORT).show() }
     }
 
-    private fun saveChartImage() {
+    private fun showExportDialog() {
+        val options = arrayOf("PNG Image", "SVG Vector")
+        AlertDialog.Builder(this).setTitle("Export Graph As")
+            .setItems(options) { _, which -> if (which == 0) savePng() else saveSvg() }
+            .show()
+    }
+
+    private fun savePng() {
         try {
-            val bitmap = lineChart.chartBitmap
             val filename = "graph_${System.currentTimeMillis()}.png"
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, filename)
@@ -213,9 +241,55 @@ class MainActivity : AppCompatActivity() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
             }
             contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)?.let { uri ->
-                contentResolver.openOutputStream(uri)?.use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
-                Toast.makeText(this, "Saved to Pictures/$filename", Toast.LENGTH_LONG).show()
+                contentResolver.openOutputStream(uri)?.use { lineChart.chartBitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                Toast.makeText(this, "Saved PNG to Pictures/$filename", Toast.LENGTH_LONG).show()
             }
-        } catch (e: Exception) { Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show() }
+        } catch (_: Exception) { Toast.makeText(this, "PNG export failed", Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun saveSvg() {
+        try {
+            val w = 800f; val h = 600f; val pad = 80f
+            val plotW = w - 2 * pad; val plotH = h - 2 * pad
+            val yLo = lineChart.axisLeft.axisMinimum; val yHi = lineChart.axisLeft.axisMaximum
+            val xLo = minX.toFloat(); val xHi = maxX.toFloat()
+            fun mapX(x: Float) = pad + ((x - xLo) / (xHi - xLo).coerceAtLeast(0.001f)) * plotW
+            fun mapY(y: Float) = h - pad - ((y - yLo) / (yHi - yLo).coerceAtLeast(0.001f)) * plotH
+
+            val sb = StringBuilder()
+            sb.append("""<svg xmlns="http://w3.org" width="800" height="600" viewBox="0 0 800 600">""")
+            sb.append("""<rect width="100%" height="100%" fill="white"/>""")
+            sb.append("""<rect x="$pad" y="$pad" width="$plotW" height="$plotH" fill="none" stroke="black" stroke-width="2"/>""")
+            sb.append("""<text x="${w/2}" y="45" text-anchor="middle" font-size="22" font-weight="bold">${lineChart.chartTitle}</text>""")
+            sb.append("""<text x="${w/2}" y="${h-20}" text-anchor="middle" font-size="18">${lineChart.xAxisTitle}</text>""")
+            sb.append("""<text x="25" y="${h/2}" text-anchor="middle" font-size="18" transform="rotate(-90 25 ${h/2})">${lineChart.yAxisTitle}</text>""")
+
+            val colors = listOf("blue", "green", "magenta", "orange", "cyan")
+            lastFuncSets.forEachIndexed { i, pts ->
+                val d = pts.joinToString(" ") { String.format(Locale.US, "%.1f,%.1f", mapX(it.x), mapY(it.y)) }
+                if (d.isNotEmpty()) sb.append("""<polyline fill="none" stroke="${colors.get(i % colors.size)}" stroke-width="2.5" points="$d"/>""")
+            }
+            if (lastDataEntries.isNotEmpty()) {
+                if (!isScatterMode) {
+                    val d = lastDataEntries.joinToString(" ") { String.format(Locale.US, "%.1f,%.1f", mapX(it.x), mapY(it.y)) }
+                    sb.append("""<polyline fill="none" stroke="red" stroke-width="2" points="$d"/>""")
+                }
+                lastDataEntries.forEach {
+                    sb.append(String.format(Locale.US, """<circle cx="%.1f" cy="%.1f" r="4.5" fill="red"/>""", mapX(it.x), mapY(it.y)))
+                }
+            }
+            sb.append("</svg>")
+
+            val filename = "graph_${System.currentTimeMillis()}.svg"
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/svg+xml")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS)
+            }
+            contentResolver.insert(MediaStore.Files.getContentUri("external"), values)?.let { uri ->
+                contentResolver.openOutputStream(uri)?.use { it.write(sb.toString().toByteArray()) }
+                Toast.makeText(this, "Saved SVG to Documents/$filename", Toast.LENGTH_LONG).show()
+            }
+        } catch (_: Exception) { Toast.makeText(this, "SVG export failed", Toast.LENGTH_SHORT).show() }
     }
 }
