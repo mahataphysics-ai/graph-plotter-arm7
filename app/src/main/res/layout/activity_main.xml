@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://android.com"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -27,7 +27,7 @@
             android:padding="6dp">
             <LinearLayout
                 android:layout_width="match_parent"
-               android:layout_height="wrap_content"
+                android:layout_height="wrap_content"
                 android:orientation="vertical">
                 <EditText
                     android:id="@+id/etFunctions"
@@ -82,14 +82,16 @@
                         android:layout_weight="1"
                         android:gravity="center"
                         android:text="X"
-                        android:textColor="#FFFFFF" />
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold" />
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="center"
                         android:text="Y"
-                        android:textColor="#FFFFFF" />
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold" />
                     <Button
                         android:id="@+id/btnDelRow"
                         android:layout_width="36dp"
@@ -124,34 +126,22 @@
                     android:textColor="#1E2A38"
                     android:textStyle="bold" />
                 <Button
-                    android:id="@+id/btnTitle"
+                    android:id="@+id/btnText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Title"
+                    android:text="TEXT"
                     android:textSize="11sp" />
                 <Button
-                    android:id="@+id/btnXRange"
+                    android:id="@+id/btnRange"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="X Range"
-                    android:textSize="11sp" />
-                <Button
-                    android:id="@+id/btnYRange"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Y Range"
-                    android:textSize="11sp" />
-                <Button
-                    android:id="@+id/btnLabels"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Labels"
+                    android:text="RANGE"
                     android:textSize="11sp" />
                 <Button
                     android:id="@+id/btnGrid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Grid: ON"
+                    android:text="GRID"
                     android:textSize="11sp" />
                 <Button
                     android:id="@+id/btnCsvMode"

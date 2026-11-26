@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -19,6 +20,7 @@ import android.widget.TableRow
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
@@ -62,17 +64,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnDelRow).setOnClickListener { deleteLastRow() }
         findViewById<Button>(R.id.btnCsv).setOnClickListener { csvPicker.launch("*/*") }
         findViewById<Button>(R.id.btnSave).setOnClickListener { showExportDialog() }
-        findViewById<Button>(R.id.btnTitle).setOnClickListener { showTitleDialog() }
-        findViewById<Button>(R.id.btnXRange).setOnClickListener { showRangeDialog(true) }
-        findViewById<Button>(R.id.btnYRange).setOnClickListener { showRangeDialog(false) }
-        findViewById<Button>(R.id.btnLabels).setOnClickListener { showLabelsDialog() }
-
-        val btnGrid = findViewById<Button>(R.id.btnGrid)
-        btnGrid.setOnClickListener {
-            gridEnabled = !gridEnabled
-            btnGrid.text = if (gridEnabled) "Grid: ON" else "Grid: OFF"
-            plotAll()
-        }
+        findViewById<Button>(R.id.btnText).setOnClickListener { showTextMenu() }
+        findViewById<Button>(R.id.btnRange).setOnClickListener { showRangeMenu() }
+        findViewById<Button>(R.id.btnGrid).setOnClickListener { showGridDialog() }
 
         val btnCsvMode = findViewById<Button>(R.id.btnCsvMode)
         btnCsvMode.setOnClickListener {
@@ -92,11 +86,81 @@ class MainActivity : AppCompatActivity() {
         plotAll()
     }
 
-    private fun showTitleDialog() {
-        val input = EditText(this).apply { hint = "Graph Title"; setText(lineChart.chartTitle) }
-        AlertDialog.Builder(this).setTitle("Set Graph Title").setView(input)
-            .setPositiveButton("Apply") { _, _ -> lineChart.chartTitle = input.text.toString(); lineChart.invalidate() }
+    private fun showTextMenu() {
+        val items = arrayOf("Title", "X Label", "Y Label", "Key (Legend)", "Font", "Font Size")
+        AlertDialog.Builder(this).setTitle("Text & Labels").setItems(items) { _, which ->
+            when (which) {
+                0 -> showSingleTextDialog("Graph Title", lineChart.chartTitle) { lineChart.chartTitle = it; lineChart.invalidate() }
+                1 -> showSingleTextDialog("X Axis Label", lineChart.xAxisTitle) { lineChart.xAxisTitle = it; lineChart.invalidate() }
+                2 -> showSingleTextDialog("Y Axis Label", lineChart.yAxisTitle) { lineChart.yAxisTitle = it; lineChart.invalidate() }
+                3 -> showLegendDialog()
+                4 -> showFontDialog()
+                5 -> showFontSizeDialog()
+            }
+        }.show()
+    }
+
+    private fun showSingleTextDialog(title: String, current: String, onSave: (String) -> Unit) {
+        val input = EditText(this).apply { setText(current) }
+        AlertDialog.Builder(this).setTitle(title).setView(input)
+            .setPositiveButton("Apply") { _, _ -> onSave(input.text.toString()) }
             .setNegativeButton("Cancel", null).show()
+    }
+
+    private fun showLegendDialog() {
+        val opts = arrayOf("Show (Bottom)", "Show (Top Right)", "Hide Legend")
+        AlertDialog.Builder(this).setTitle("Key (Legend)").setItems(opts) { _, which ->
+            lineChart.legend.isEnabled = which != 2
+            if (which == 0) {
+                lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM
+                lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.LEFT
+                lineChart.legend.setDrawInside(false)
+            } else if (which == 1) {
+                lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.TOP
+                lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT
+                lineChart.legend.setDrawInside(true)
+            }
+            lineChart.invalidate()
+        }.show()
+    }
+
+    private fun showFontDialog() {
+        val fonts = arrayOf("Default (Sans)", "Serif", "Monospace")
+        AlertDialog.Builder(this).setTitle("Select Font").setItems(fonts) { _, which ->
+            lineChart.customTypeface = when (which) {
+                1 -> Typeface.SERIF
+                2 -> Typeface.MONOSPACE
+                else -> Typeface.SANS_SERIF
+            }
+            lineChart.applyFontSettings()
+        }.show()
+    }
+
+    private fun showFontSizeDialog() {
+        val input = EditText(this).apply {
+            setText(lineChart.baseFontSizeSp.toString())
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        }
+        AlertDialog.Builder(this).setTitle("Font Size (sp)").setView(input)
+            .setPositiveButton("Apply") { _, _ ->
+                input.text.toString().toFloatOrNull()?.let {
+                    lineChart.baseFontSizeSp = it.coerceIn(8f, 24f)
+                    lineChart.applyFontSettings()
+                }
+            }.setNegativeButton("Cancel", null).show()
+    }
+
+    private fun showRangeMenu() {
+        AlertDialog.Builder(this).setTitle("Select Axis Range").setItems(arrayOf("X Range", "Y Range")) { _, which ->
+            showRangeDialog(which == 0)
+        }.show()
+    }
+
+    private fun showGridDialog() {
+        AlertDialog.Builder(this).setTitle("Grid Lines").setItems(arrayOf("Grid ON", "Grid OFF")) { _, which ->
+            gridEnabled = (which == 0)
+            plotAll()
+        }.show()
     }
 
     private fun showRangeDialog(isX: Boolean) {
@@ -119,19 +183,6 @@ class MainActivity : AppCompatActivity() {
                 if (isX && a != null && b != null && a < b) { minX = a; maxX = b }
                 else if (!isX) { minY = a?.toFloat(); maxY = b?.toFloat() }
                 plotAll()
-            }.setNegativeButton("Cancel", null).show()
-    }
-
-    private fun showLabelsDialog() {
-        val layout = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 20, 40, 10) }
-        val inputX = EditText(this).apply { hint = "X Label"; setText(lineChart.xAxisTitle) }
-        val inputY = EditText(this).apply { hint = "Y Label"; setText(lineChart.yAxisTitle) }
-        layout.addView(inputX); layout.addView(inputY)
-        AlertDialog.Builder(this).setTitle("Set Axis Labels").setView(layout)
-            .setPositiveButton("Apply") { _, _ ->
-                lineChart.xAxisTitle = inputX.text.toString()
-                lineChart.yAxisTitle = inputY.text.toString()
-                lineChart.invalidate()
             }.setNegativeButton("Cancel", null).show()
     }
 
