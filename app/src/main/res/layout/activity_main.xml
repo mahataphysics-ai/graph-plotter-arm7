@@ -122,7 +122,7 @@
                     android:gravity="center"
                     android:text="MENU"
                     android:textColor="#1E2A38"
-                    android:textSyle="bold" />
+                    android:textStyle="bold" />
                 <Button
                     android:id="@+id/btnTitle"
                     android:layout_width="match_parent"
