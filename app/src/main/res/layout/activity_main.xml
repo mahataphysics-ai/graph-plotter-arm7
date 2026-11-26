@@ -23,46 +23,37 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1.75"
-            android:background="#F4F6F9"
+            android:background="#2C313A"
             android:padding="6dp">
             <LinearLayout
                 android:layout_width="match_parent"
                android:layout_height="wrap_content"
                 android:orientation="vertical">
-
                 <EditText
                     android:id="@+id/etFunctions"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Functions (;) e.g. sin(x)*5"
+                    android:hint="Functions (;)"
                     android:text="sin(x)*5"
-                    android:textSize="13sp"
-                    android:inputType="text" />
-
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#B0B8C4"
+                    android:textSize="13sp" />
                 <Button
                     android:id="@+id/btnPlot"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Plot"
                     android:textSize="12sp" />
-
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
                     <Button
-                        android:id="@+id/btnAddRow"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="+ Row"
-                        android:textSize="11sp" />
-                    <Button
                         android:id="@+id/btnCsv"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="CSV"
+                        android:text="Import"
                         android:textSize="11sp" />
                     <Button
                         android:id="@+id/btnSave"
@@ -72,12 +63,44 @@
                         android:text="Export"
                         android:textSize="11sp" />
                 </LinearLayout>
-
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="#3E4451"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+                    <Button
+                        android:id="@+id/btnAddRow"
+                        android:layout_width="36dp"
+                        android:layout_height="32dp"
+                        android:text="+"
+                        android:textSize="14sp" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="X"
+                        android:textColor="#FFFFFF" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="Y"
+                        android:textColor="#FFFFFF" />
+                    <Button
+                        android:id="@+id/btnDelRow"
+                        android:layout_width="36dp"
+                        android:layout_height="32dp"
+                        android:text="-"
+                        android:textSize="14sp" />
+                </LinearLayout>
                 <TableLayout
                     android:id="@+id/tblCsvData"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
                     android:stretchColumns="*" />
             </LinearLayout>
         </ScrollView>
@@ -99,8 +122,7 @@
                     android:gravity="center"
                     android:text="MENU"
                     android:textColor="#1E2A38"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:textSyle="bold" />
                 <Button
                     android:id="@+id/btnTitle"
                     android:layout_width="match_parent"
@@ -139,6 +161,5 @@
                     android:textSize="11sp" />
             </LinearLayout>
         </ScrollView>
-
     </LinearLayout>
 </LinearLayout>

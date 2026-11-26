@@ -16,7 +16,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TableLayout
 import android.widget.TableRow
-import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -60,6 +59,7 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnPlot).setOnClickListener { plotAll() }
         findViewById<Button>(R.id.btnAddRow).setOnClickListener { addEditableRow("", "") }
+        findViewById<Button>(R.id.btnDelRow).setOnClickListener { deleteLastRow() }
         findViewById<Button>(R.id.btnCsv).setOnClickListener { csvPicker.launch("*/*") }
         findViewById<Button>(R.id.btnSave).setOnClickListener { showExportDialog() }
         findViewById<Button>(R.id.btnTitle).setOnClickListener { showTitleDialog() }
@@ -186,13 +186,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun populateEditableTable(rows: List<Pair<String, String>>) {
         tblCsvData.removeAllViews()
-        val header = TableRow(this).apply { setBackgroundColor(Color.parseColor("#DCE3EE")) }
-        listOf("X", "Y").forEach { col ->
-            header.addView(TextView(this).apply {
-                text = col; gravity = Gravity.CENTER; setPadding(8, 6, 8, 6); textSize = 12f
-            })
-        }
-        tblCsvData.addView(header)
         rows.forEach { addEditableRow(it.first, it.second) }
     }
 
@@ -200,20 +193,25 @@ class MainActivity : AppCompatActivity() {
         val row = TableRow(this)
         listOf(xVal, yVal).forEach { cellText ->
             row.addView(EditText(this).apply {
-                setText(cellText)
-                hint = "0.0"
-                gravity = Gravity.CENTER
-                textSize = 12f
-                setPadding(6, 4, 6, 4)
+                setText(cellText); hint = "0.0"
+                setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY)
+                gravity = Gravity.CENTER; textSize = 12f; setPadding(6, 4, 6, 4)
                 inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
             })
         }
         tblCsvData.addView(row)
     }
 
+    private fun deleteLastRow() {
+        if (tblCsvData.childCount > 0) {
+            tblCsvData.removeViewAt(tblCsvData.childCount - 1)
+            plotAll()
+        }
+    }
+
     private fun readEditableTableEntries(): List<Entry> {
         val list = mutableListOf<Entry>()
-        for (i in 1 until tblCsvData.childCount) {
+        for (i in 0 until tblCsvData.childCount) {
             val row = tblCsvData.getChildAt(i) as? TableRow ?: continue
             val x = (row.getChildAt(0) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
             val y = (row.getChildAt(1) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
@@ -238,9 +236,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showExportDialog() {
-        val options = arrayOf("PNG Image", "SVG Vector")
         AlertDialog.Builder(this).setTitle("Export Graph As")
-            .setItems(options) { _, which -> if (which == 0) savePng() else saveSvg() }
+            .setItems(arrayOf("PNG Image", "SVG Vector")) { _, which -> if (which == 0) savePng() else saveSvg() }
             .show()
     }
 
@@ -268,10 +265,8 @@ class MainActivity : AppCompatActivity() {
             fun mapX(x: Float) = pad + ((x - xLo) / (xHi - xLo).coerceAtLeast(0.001f)) * plotW
             fun mapY(y: Float) = h - pad - ((y - yLo) / (yHi - yLo).coerceAtLeast(0.001f)) * plotH
 
-            val sb = StringBuilder()
-            sb.append("""<svg xmlns="http://w3.org" width="800" height="600" viewBox="0 0 800 600">""")
-            sb.append("""<rect width="100%" height="100%" fill="white"/>""")
-            sb.append("""<rect x="$pad" y="$pad" width="$plotW" height="$plotH" fill="none" stroke="black" stroke-width="2"/>""")
+            val sb = StringBuilder("""<svg xmlns="http://w3.org" width="800" height="600" viewBox="0 0 800 600">""")
+            sb.append("""<rect width="100%" height="100%" fill="white"/><rect x="$pad" y="$pad" width="$plotW" height="$plotH" fill="none" stroke="black" stroke-width="2"/>""")
             sb.append("""<text x="${w/2}" y="55" text-anchor="middle" font-size="22" font-weight="bold">${lineChart.chartTitle}</text>""")
             sb.append("""<text x="${w/2}" y="${h-35}" text-anchor="middle" font-size="18">${lineChart.xAxisTitle}</text>""")
             sb.append("""<text x="40" y="${h/2}" text-anchor="middle" font-size="18" transform="rotate(-90 40 ${h/2})">${lineChart.yAxisTitle}</text>""")
@@ -286,9 +281,7 @@ class MainActivity : AppCompatActivity() {
                     val d = lastDataEntries.joinToString(" ") { String.format(Locale.US, "%.1f,%.1f", mapX(it.x), mapY(it.y)) }
                     sb.append("""<polyline fill="none" stroke="red" stroke-width="2" points="$d"/>""")
                 }
-                lastDataEntries.forEach {
-                    sb.append(String.format(Locale.US, """<circle cx="%.1f" cy="%.1f" r="4.5" fill="red"/>""", mapX(it.x), mapY(it.y)))
-                }
+                lastDataEntries.forEach { sb.append(String.format(Locale.US, """<circle cx="%.1f" cy="%.1f" r="4.5" fill="red"/>""", mapX(it.x), mapY(it.y))) }
             }
             sb.append("</svg>")
 
