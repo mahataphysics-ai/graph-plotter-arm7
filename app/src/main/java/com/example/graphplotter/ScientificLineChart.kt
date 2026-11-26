@@ -22,12 +22,14 @@ class ScientificLineChart @JvmOverloads constructor(
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
+        textSize = 36f
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.DKGRAY
+        textSize = 28f
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
@@ -37,21 +39,20 @@ class ScientificLineChart @JvmOverloads constructor(
         setBorderColor(Color.BLACK)
         setBorderWidth(1.5f)
         setExtraOffsets(18f, 20f, 8f, 18f)
-        applyFontSettings()
     }
 
     fun applyFontSettings() {
-        val density = resources.displayMetrics.scaledDensity
+        val density = resources?.displayMetrics?.scaledDensity ?: 2.5f
         titlePaint.typeface = customTypeface
         titlePaint.textSize = (baseFontSizeSp + 3f) * density
         labelPaint.typeface = customTypeface
         labelPaint.textSize = baseFontSizeSp * density
-        xAxis.typeface = customTypeface
-        xAxis.textSize = (baseFontSizeSp - 2f).coerceAtLeast(8f)
-        axisLeft.typeface = customTypeface
-        axisLeft.textSize = (baseFontSizeSp - 2f).coerceAtLeast(8f)
-        legend.typeface = customTypeface
-        legend.textSize = (baseFontSizeSp - 1f).coerceAtLeast(9f)
+        xAxis?.typeface = customTypeface
+        xAxis?.textSize = (baseFontSizeSp - 2f).coerceAtLeast(8f)
+        axisLeft?.typeface = customTypeface
+        axisLeft?.textSize = (baseFontSizeSp - 2f).coerceAtLeast(8f)
+        legend?.typeface = customTypeface
+        legend?.textSize = (baseFontSizeSp - 1f).coerceAtLeast(9f)
         invalidate()
     }
 
