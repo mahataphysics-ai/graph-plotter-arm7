@@ -33,7 +33,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var lineChart: ScientificLineChart
     private lateinit var etFunctions: EditText
-    private lateinit var etDataPoints: EditText
     private lateinit var tblCsvData: TableLayout
 
     private var minX = -10.0
@@ -57,10 +56,10 @@ class MainActivity : AppCompatActivity() {
 
         lineChart = findViewById(R.id.lineChart)
         etFunctions = findViewById(R.id.etFunctions)
-        etDataPoints = findViewById(R.id.etDataPoints)
         tblCsvData = findViewById(R.id.tblCsvData)
 
         findViewById<Button>(R.id.btnPlot).setOnClickListener { plotAll() }
+        findViewById<Button>(R.id.btnAddRow).setOnClickListener { addEditableRow("", "") }
         findViewById<Button>(R.id.btnCsv).setOnClickListener { csvPicker.launch("*/*") }
         findViewById<Button>(R.id.btnSave).setOnClickListener { showExportDialog() }
         findViewById<Button>(R.id.btnTitle).setOnClickListener { showTitleDialog() }
@@ -88,6 +87,8 @@ class MainActivity : AppCompatActivity() {
         lineChart.axisRight.setDrawLabels(false)
         lineChart.axisRight.setDrawGridLines(false)
         lineChart.description.isEnabled = false
+
+        populateEditableTable(listOf(Pair("-6", "2"), Pair("-2", "-3"), Pair("1", "4"), Pair("5", "1")))
         plotAll()
     }
 
@@ -158,14 +159,8 @@ class MainActivity : AppCompatActivity() {
         }
         lastFuncSets = funcLists
 
-        val entries = etDataPoints.text.toString().split(";").mapNotNull { pair ->
-            val parts = pair.trim().split(",")
-            val x = parts.firstOrNull()?.trim()?.toFloatOrNull()
-            val y = parts.getOrNull(1)?.trim()?.toFloatOrNull()
-            if (x != null && y != null) Entry(x, y) else null
-        }.sortedBy { it.x }
+        val entries = readEditableTableEntries()
         lastDataEntries = entries
-        updateCsvTable(entries)
 
         if (entries.isNotEmpty()) {
             dataSets.add(LineDataSet(entries, if (isScatterMode) "Data (Scatter)" else "Data (Line)").apply {
@@ -189,39 +184,56 @@ class MainActivity : AppCompatActivity() {
         lineChart.invalidate()
     }
 
-    private fun updateCsvTable(entries: List<Entry>) {
+    private fun populateEditableTable(rows: List<Pair<String, String>>) {
         tblCsvData.removeAllViews()
-        if (entries.isEmpty()) return
-        val header = TableRow(this).apply { setBackgroundColor(Color.LTGRAY) }
+        val header = TableRow(this).apply { setBackgroundColor(Color.parseColor("#DCE3EE")) }
         listOf("X", "Y").forEach { col ->
             header.addView(TextView(this).apply {
                 text = col; gravity = Gravity.CENTER; setPadding(8, 6, 8, 6); textSize = 12f
             })
         }
         tblCsvData.addView(header)
-        entries.forEach { e ->
-            val row = TableRow(this)
-            listOf(e.x.toString(), e.y.toString()).forEach { valStr ->
-                row.addView(TextView(this).apply {
-                    text = valStr; gravity = Gravity.CENTER; setPadding(8, 4, 8, 4); textSize = 12f
-                })
-            }
-            tblCsvData.addView(row)
+        rows.forEach { addEditableRow(it.first, it.second) }
+    }
+
+    private fun addEditableRow(xVal: String, yVal: String) {
+        val row = TableRow(this)
+        listOf(xVal, yVal).forEach { cellText ->
+            row.addView(EditText(this).apply {
+                setText(cellText)
+                hint = "0.0"
+                gravity = Gravity.CENTER
+                textSize = 12f
+                setPadding(6, 4, 6, 4)
+                inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            })
         }
+        tblCsvData.addView(row)
+    }
+
+    private fun readEditableTableEntries(): List<Entry> {
+        val list = mutableListOf<Entry>()
+        for (i in 1 until tblCsvData.childCount) {
+            val row = tblCsvData.getChildAt(i) as? TableRow ?: continue
+            val x = (row.getChildAt(0) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
+            val y = (row.getChildAt(1) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
+            if (x != null && y != null) list.add(Entry(x, y))
+        }
+        return list.sortedBy { it.x }
     }
 
     private fun loadCsvFromUri(uri: Uri) {
         try {
-            val pairs = mutableListOf<String>()
+            val pairs = mutableListOf<Pair<String, String>>()
             contentResolver.openInputStream(uri)?.use { stream ->
                 BufferedReader(InputStreamReader(stream)).forEachLine { line ->
                     val cols = line.split(",")
                     val x = cols.firstOrNull()?.trim()?.toFloatOrNull()
                     val y = cols.getOrNull(1)?.trim()?.toFloatOrNull()
-                    if (x != null && y != null) pairs.add("$x,$y")
+                    if (x != null && y != null) pairs.add(Pair(x.toString(), y.toString()))
                 }
             }
-            if (pairs.isNotEmpty()) { etDataPoints.setText(pairs.joinToString("; ")); plotAll() }
+            if (pairs.isNotEmpty()) { populateEditableTable(pairs); plotAll() }
         } catch (_: Exception) { Toast.makeText(this, "CSV read failed", Toast.LENGTH_SHORT).show() }
     }
 
@@ -260,9 +272,9 @@ class MainActivity : AppCompatActivity() {
             sb.append("""<svg xmlns="http://w3.org" width="800" height="600" viewBox="0 0 800 600">""")
             sb.append("""<rect width="100%" height="100%" fill="white"/>""")
             sb.append("""<rect x="$pad" y="$pad" width="$plotW" height="$plotH" fill="none" stroke="black" stroke-width="2"/>""")
-            sb.append("""<text x="${w/2}" y="45" text-anchor="middle" font-size="22" font-weight="bold">${lineChart.chartTitle}</text>""")
-            sb.append("""<text x="${w/2}" y="${h-20}" text-anchor="middle" font-size="18">${lineChart.xAxisTitle}</text>""")
-            sb.append("""<text x="25" y="${h/2}" text-anchor="middle" font-size="18" transform="rotate(-90 25 ${h/2})">${lineChart.yAxisTitle}</text>""")
+            sb.append("""<text x="${w/2}" y="55" text-anchor="middle" font-size="22" font-weight="bold">${lineChart.chartTitle}</text>""")
+            sb.append("""<text x="${w/2}" y="${h-35}" text-anchor="middle" font-size="18">${lineChart.xAxisTitle}</text>""")
+            sb.append("""<text x="40" y="${h/2}" text-anchor="middle" font-size="18" transform="rotate(-90 40 ${h/2})">${lineChart.yAxisTitle}</text>""")
 
             val colors = listOf("blue", "green", "magenta", "orange", "cyan")
             lastFuncSets.forEachIndexed { i, pts ->

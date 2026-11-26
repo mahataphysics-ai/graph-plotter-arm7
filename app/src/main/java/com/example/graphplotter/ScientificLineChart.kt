@@ -19,14 +19,14 @@ class ScientificLineChart @JvmOverloads constructor(
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
-        textSize = 36f
+        textSize = 34f
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
 
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.DKGRAY
-        textSize = 30f
+        textSize = 26f
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
@@ -35,24 +35,26 @@ class ScientificLineChart @JvmOverloads constructor(
         setDrawBorders(true)
         setBorderColor(Color.BLACK)
         setBorderWidth(1.5f)
-        setExtraOffsets(26f, 24f, 12f, 24f)
+        setExtraOffsets(18f, 20f, 8f, 18f)
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
         if (chartTitle.isNotBlank()) {
-            canvas.drawText(chartTitle, width / 2f, 34f, titlePaint)
+            canvas.drawText(chartTitle, viewPortHandler.contentCenter.x, viewPortHandler.contentTop() - 10f, titlePaint)
         }
 
         if (xAxisTitle.isNotBlank()) {
-            canvas.drawText(xAxisTitle, viewPortHandler.contentCenter.x, height - 10f, labelPaint)
+            canvas.drawText(xAxisTitle, viewPortHandler.contentCenter.x, viewPortHandler.contentBottom() + 44f, labelPaint)
         }
 
         if (yAxisTitle.isNotBlank()) {
+            val yX = (viewPortHandler.contentLeft() - 56f).coerceAtLeast(22f)
+            val yY = viewPortHandler.contentCenter.y
             canvas.save()
-            canvas.rotate(-90f, 24f, viewPortHandler.contentCenter.y)
-            canvas.drawText(yAxisTitle, 24f, viewPortHandler.contentCenter.y, labelPaint)
+            canvas.rotate(-90f, yX, yY)
+            canvas.drawText(yAxisTitle, yX, yY, labelPaint)
             canvas.restore()
         }
     }

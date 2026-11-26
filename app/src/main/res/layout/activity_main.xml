@@ -3,7 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:background="#FFFFFF"
+    android:padding="6dp">
 
     <com.example.graphplotter.ScientificLineChart
         android:id="@+id/lineChart"
@@ -21,45 +22,41 @@
         <ScrollView
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1.7"
-            android:paddingRight="6dp">
-
+            android:layout_weight="1.75"
+            android:background="#F4F6F9"
+            android:padding="6dp">
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+               android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <EditText
                     android:id="@+id/etFunctions"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Functions (; second)"
+                    android:hint="Functions (;) e.g. sin(x)*5"
                     android:text="sin(x)*5"
                     android:textSize="13sp"
                     android:inputType="text" />
 
-                <EditText
-                    android:id="@+id/etDataPoints"
+                <Button
+                    android:id="@+id/btnPlot"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Data x,y; e.g. -5,2; 0,0"
-                    android:text="-6,2; -2,-3; 1,4; 5,1"
-                    android:textSize="13sp"
-                    android:inputType="text" />
+                    android:text="Plot"
+                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
-
                     <Button
-                        android:id="@+id/btnPlot"
+                        android:id="@+id/btnAddRow"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Plot"
+                        android:text="+ Row"
                         android:textSize="11sp" />
-
                     <Button
                         android:id="@+id/btnCsv"
                         android:layout_width="0dp"
@@ -67,7 +64,6 @@
                         android:layout_weight="1"
                         android:text="CSV"
                         android:textSize="11sp" />
-
                     <Button
                         android:id="@+id/btnSave"
                         android:layout_width="0dp"
@@ -81,7 +77,7 @@
                     android:id="@+id/tblCsvData"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="4dp"
                     android:stretchColumns="*" />
             </LinearLayout>
         </ScrollView>
@@ -90,57 +86,51 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="#F0F4F8"
+            android:layout_marginLeft="6dp"
+            android:background="#E3E8F4"
             android:padding="4dp">
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
-
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:text="MENU"
+                    android:textColor="#1E2A38"
                     android:textSize="11sp"
                     android:textStyle="bold" />
-
                 <Button
                     android:id="@+id/btnTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Title"
                     android:textSize="11sp" />
-
                 <Button
                     android:id="@+id/btnXRange"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="X Range"
                     android:textSize="11sp" />
-
                 <Button
                     android:id="@+id/btnYRange"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Y Range"
                     android:textSize="11sp" />
-
                 <Button
                     android:id="@+id/btnLabels"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Labels"
                     android:textSize="11sp" />
-
                 <Button
                     android:id="@+id/btnGrid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Grid: ON"
                     android:textSize="11sp" />
-
                 <Button
                     android:id="@+id/btnCsvMode"
                     android:layout_width="match_parent"
