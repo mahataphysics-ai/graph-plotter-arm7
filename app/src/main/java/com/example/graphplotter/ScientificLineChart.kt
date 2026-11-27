@@ -58,6 +58,24 @@ class ScientificLineChart @JvmOverloads constructor(
         legend.orientation = Legend.LegendOrientation.VERTICAL
     }
 
+
+    var canvasBgColor: Int = Color.WHITE
+
+    fun setCanvasBackground(bgColor: Int) {
+        canvasBgColor = bgColor
+        setBackgroundColor(bgColor)
+        val isDark = Color.luminance(bgColor) < 0.4f
+        val fgColor = if (isDark) Color.WHITE else Color.BLACK
+        val subColor = if (isDark) Color.LTGRAY else Color.DKGRAY
+        setBorderColor(fgColor)
+        titlePaint.color = fgColor
+        labelPaint.color = subColor
+        xAxis?.textColor = fgColor
+        axisLeft?.textColor = fgColor
+        legend?.textColor = fgColor
+        invalidate()
+    }
+
     fun applyFontSettings() {
         val density = resources?.displayMetrics?.scaledDensity ?: 2.5f
         titlePaint.typeface = customTypeface

@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
@@ -12,6 +13,8 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.text.InputType
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -69,6 +72,8 @@ class MainActivity : AppCompatActivity() {
         try {
         setContentView(R.layout.activity_main)
 
+        supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#4A5568")))
+        window.statusBarColor = Color.parseColor("#374151")
         lineChart = findViewById(R.id.lineChart)
         etFunctions = findViewById(R.id.etFunctions)
         tblCsvData = findViewById(R.id.tblCsvData)
@@ -110,6 +115,39 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton("OK", null)
                 .show()
         }
+    }
+
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        val item = menu.add(0, 1001, 0, "☰")
+        item.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 1001) {
+            showCanvasColorDialog()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun showCanvasColorDialog() {
+        val names = arrayOf("White (Default)", "Light Gray", "Cream / Ivory", "Soft Blue", "Dark Charcoal", "Black")
+        val colors = intArrayOf(
+            Color.WHITE,
+            Color.parseColor("#ECEFF1"),
+            Color.parseColor("#FFFDF5"),
+            Color.parseColor("#EEF6FF"),
+            Color.parseColor("#1E222A"),
+            Color.BLACK
+        )
+        AlertDialog.Builder(this)
+            .setTitle("Canvas Color")
+            .setItems(names) { _, which ->
+                lineChart.setCanvasBackground(colors.get(which))
+            }
+            .show()
     }
 
     private fun showImportMenu() {
@@ -538,7 +576,7 @@ class MainActivity : AppCompatActivity() {
             fun mapY(y: Float) = h - pad - ((y - yLo) / (yHi - yLo).coerceAtLeast(0.001f)) * plotH
 
             val sb = StringBuilder("""<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">""")
-            sb.append("""<rect width="100%" height="100%" fill="white"/><rect x="$pad" y="$pad" width="$plotW" height="$plotH" fill="none" stroke="black" stroke-width="2"/>""")
+            sb.append("""<rect width="100%" height="100%" fill="#${String.format("%06X", 0xFFFFFF and lineChart.canvasBgColor)}"/><rect x="$pad" y="$pad" width="$plotW" height="$plotH" fill="none" stroke="black" stroke-width="2"/>""")
             sb.append("""<text x="${w/2}" y="55" text-anchor="middle" font-size="22" font-weight="bold">${lineChart.chartTitle}</text>""")
             sb.append("""<text x="${w/2}" y="${h-35}" text-anchor="middle" font-size="18">${lineChart.xAxisTitle}</text>""")
             sb.append("""<text x="40" y="${h/2}" text-anchor="middle" font-size="18" transform="rotate(-90 40 ${h/2})">${lineChart.yAxisTitle}</text>""")
