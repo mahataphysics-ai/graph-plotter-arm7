@@ -17,6 +17,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TableLayout
 import android.widget.TableRow
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -37,6 +38,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var lineChart: ScientificLineChart
     private lateinit var etFunctions: EditText
     private lateinit var tblCsvData: TableLayout
+    private lateinit var tvColStatus: TextView
 
     private var minX = -10.0
     private var maxX = 10.0
@@ -50,12 +52,16 @@ class MainActivity : AppCompatActivity() {
     private var lastFuncSets: List<List<Entry>> = emptyList()
     private var lastDataEntries: List<Entry> = emptyList()
 
+    private var numColumns = 2
+    private val selectedColumns = mutableListOf<Int>()
+    private var importIsCsv = true
+
     private val palette = listOf(Color.BLUE, Color.rgb(0, 150, 0), Color.MAGENTA, Color.rgb(255, 120, 0), Color.CYAN)
     private val colorNames = arrayOf("Red", "Blue", "Green", "Black", "Magenta", "Orange", "Cyan")
     private val colorValues = intArrayOf(Color.RED, Color.BLUE, Color.rgb(0, 150, 0), Color.BLACK, Color.MAGENTA, Color.rgb(255, 120, 0), Color.CYAN)
 
-    private val csvPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { loadCsvFromUri(it) }
+    private val filePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let { loadDataFromUri(it, importIsCsv) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,11 +71,12 @@ class MainActivity : AppCompatActivity() {
         lineChart = findViewById(R.id.lineChart)
         etFunctions = findViewById(R.id.etFunctions)
         tblCsvData = findViewById(R.id.tblCsvData)
+        tvColStatus = findViewById(R.id.tvColStatus)
 
         findViewById<Button>(R.id.btnPlot).setOnClickListener { plotAll() }
-        findViewById<Button>(R.id.btnAddRow).setOnClickListener { addEditableRow("", "") }
+        findViewById<Button>(R.id.btnAddRow).setOnClickListener { addEditableRow(List(numColumns) { "" }) }
         findViewById<Button>(R.id.btnDelRow).setOnClickListener { deleteLastRow() }
-        findViewById<Button>(R.id.btnCsv).setOnClickListener { csvPicker.launch("*/*") }
+        findViewById<Button>(R.id.btnCsv).setOnClickListener { showImportMenu() }
         findViewById<Button>(R.id.btnSave).setOnClickListener { showExportDialog() }
         findViewById<Button>(R.id.btnText).setOnClickListener { showTextMenu() }
         findViewById<Button>(R.id.btnRange).setOnClickListener { showRangeMenu() }
@@ -86,8 +93,26 @@ class MainActivity : AppCompatActivity() {
         lineChart.description.isEnabled = false
         lineChart.applyFontSettings()
 
-        populateEditableTable(listOf(Pair("-6", "2"), Pair("-2", "-3"), Pair("1", "4"), Pair("5", "1")))
+        populateEditableTable(
+            listOf(
+                listOf("-6", "2"),
+                listOf("-2", "-3"),
+                listOf("1", "4"),
+                listOf("5", "1")
+            )
+        )
         plotAll()
+    }
+
+    private fun showImportMenu() {
+        val options = arrayOf("CSV Data (.csv)", "TXT Data (Tab / Space separated)")
+        AlertDialog.Builder(this)
+            .setTitle("Import Data Format")
+            .setItems(options) { _, which ->
+                importIsCsv = (which == 0)
+                filePicker.launch("*/*")
+            }
+            .show()
     }
 
     private fun showTextMenu() {
@@ -161,10 +186,10 @@ class MainActivity : AppCompatActivity() {
                 0 -> AlertDialog.Builder(this).setTitle("Marker Type")
                     .setItems(arrayOf("Dot (1px)", "Plus (+)", "Asterisk (*)", "Filled Circle", "Open Circle")) { _, m -> lineChart.markerType = m; plotAll() }.show()
                 1 -> showNumberDialog("Marker Size (1-15)", lineChart.markerSize) { lineChart.markerSize = it.coerceIn(1f, 15f); plotAll() }
-                2 -> AlertDialog.Builder(this).setTitle("Marker Color").setItems(colorNames) { _, c -> lineChart.markerColor = colorValues.get(c); plotAll() }.show()
+                2 -> AlertDialog.Builder(this).setTitle("Marker Color").setItems(colorNames) { _, c -> lineChart.markerColor = colorValues[c]; plotAll() }.show()
                 3 -> AlertDialog.Builder(this).setTitle("Line Type").setItems(arrayOf("Solid", "Dash-Dot")) { _, l -> lineDashed = (l == 1); plotAll() }.show()
                 4 -> showNumberDialog("Line Width (0.5-10)", dataLineWidth) { dataLineWidth = it.coerceIn(0.5f, 10f); plotAll() }
-                5 -> AlertDialog.Builder(this).setTitle("Line Color").setItems(colorNames) { _, c -> dataLineColor = colorValues.get(c); plotAll() }.show()
+                5 -> AlertDialog.Builder(this).setTitle("Line Color").setItems(colorNames) { _, c -> dataLineColor = colorValues[c]; plotAll() }.show()
             }
         }.show()
     }
@@ -222,7 +247,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 funcLists.add(entries)
                 dataSets.add(LineDataSet(entries, "f${idx + 1}(x)=$eq").apply {
-                    color = palette.get(idx % palette.size); setDrawCircles(false); lineWidth = 2.2f
+                    color = palette[idx % palette.size]; setDrawCircles(false); lineWidth = 2.2f
                     if (lineDashed) enableDashedLine(18f, 8f, 0f)
                 })
             } catch (_: Exception) { Toast.makeText(this, "Invalid: $eq", Toast.LENGTH_SHORT).show() }
@@ -315,18 +340,85 @@ class MainActivity : AppCompatActivity() {
         return null
     }
 
-    private fun populateEditableTable(rows: List<Pair<String, String>>) {
+    private fun populateEditableTable(rows: List<List<String>>) {
         tblCsvData.removeAllViews()
-        rows.forEach { addEditableRow(it.first, it.second) }
+        numColumns = (rows.maxOfOrNull { it.size } ?: 2).coerceAtLeast(2)
+        selectedColumns.clear()
+        if (numColumns == 2) {
+            selectedColumns.addAll(listOf(0, 1))
+        }
+
+        val headerRow = TableRow(this).apply { setBackgroundColor(Color.parseColor("#353B45")) }
+        for (colIdx in 0 until numColumns) {
+            val tvHeader = TextView(this).apply {
+                text = "X${colIdx + 1}"
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setPadding(16, 10, 16, 10)
+                minWidth = 90
+                setOnClickListener { onColumnHeaderClicked(colIdx) }
+            }
+            headerRow.addView(tvHeader)
+        }
+        tblCsvData.addView(headerRow)
+
+        rows.forEach { addEditableRow(it) }
+        updateColumnHeaderStyles()
     }
 
-    private fun addEditableRow(xVal: String, yVal: String) {
+    private fun onColumnHeaderClicked(colIdx: Int) {
+        if (numColumns <= 2) {
+            Toast.makeText(this, "2-column data plots X1 vs X2 automatically", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (selectedColumns.contains(colIdx)) {
+            selectedColumns.remove(colIdx)
+        } else {
+            if (selectedColumns.size >= 2) {
+                selectedColumns.removeAt(0)
+            }
+            selectedColumns.add(colIdx)
+        }
+        updateColumnHeaderStyles()
+        plotAll()
+    }
+
+    private fun updateColumnHeaderStyles() {
+        val headerRow = tblCsvData.getChildAt(0) as? TableRow ?: return
+        for (colIdx in 0 until headerRow.childCount) {
+            val tv = headerRow.getChildAt(colIdx) as? TextView ?: continue
+            val selPos = selectedColumns.indexOf(colIdx)
+            if (numColumns > 2 && selPos != -1) {
+                tv.setBackgroundColor(Color.parseColor("#26A69A"))
+                tv.text = if (selPos == 0) "X${colIdx + 1} (X)" else "X${colIdx + 1} (Y)"
+            } else {
+                tv.setBackgroundColor(Color.TRANSPARENT)
+                tv.text = "X${colIdx + 1}"
+            }
+        }
+        tvColStatus.text = when {
+            numColumns == 2 -> "X1 vs X2"
+            selectedColumns.size == 2 -> "X${selectedColumns.get(0) + 1} vs X${selectedColumns.get(1) + 1}"
+            selectedColumns.size == 1 -> "X: X${selectedColumns.get(0) + 1} (Tap Y)"
+            else -> "Tap 2 cols (X1..X$numColumns)"
+        }
+    }
+
+    private fun addEditableRow(values: List<String>) {
         val row = TableRow(this)
-        listOf(xVal, yVal).forEach { cellText ->
+        for (colIdx in 0 until numColumns) {
+            val cellText = values.getOrElse(colIdx) { "" }
             row.addView(EditText(this).apply {
-                setText(cellText); hint = "0.0"
-                setTextColor(Color.WHITE); setHintTextColor(Color.LTGRAY)
-                gravity = Gravity.CENTER; textSize = 12f; setPadding(6, 4, 6, 4)
+                setText(cellText)
+                hint = "0.0"
+                setTextColor(Color.WHITE)
+                setHintTextColor(Color.LTGRAY)
+                gravity = Gravity.CENTER
+                textSize = 12f
+                minWidth = 90
+                setPadding(8, 4, 8, 4)
                 inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED or InputType.TYPE_NUMBER_FLAG_DECIMAL
             })
         }
@@ -334,44 +426,87 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun deleteLastRow() {
-        if (tblCsvData.childCount > 0) { tblCsvData.removeViewAt(tblCsvData.childCount - 1); plotAll() }
+        if (tblCsvData.childCount > 1) {
+            tblCsvData.removeViewAt(tblCsvData.childCount - 1)
+            plotAll()
+        }
     }
 
     private fun readEditableTableEntries(): List<Entry> {
+        val (xCol, yCol) = when {
+            numColumns == 2 -> Pair(0, 1)
+            selectedColumns.size >= 2 -> Pair(selectedColumns.get(0), selectedColumns.get(1))
+            else -> return emptyList()
+        }
+
         val list = mutableListOf<Entry>()
-        for (i in 0 until tblCsvData.childCount) {
+        for (i in 1 until tblCsvData.childCount) {
             val row = tblCsvData.getChildAt(i) as? TableRow ?: continue
-            val x = (row.getChildAt(0) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
-            val y = (row.getChildAt(1) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
+            val x = (row.getChildAt(xCol) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
+            val y = (row.getChildAt(yCol) as? EditText)?.text?.toString()?.trim()?.toFloatOrNull()
             if (x != null && y != null) list.add(Entry(x, y))
         }
         return list.sortedBy { it.x }
     }
 
-    private fun loadCsvFromUri(uri: Uri) {
+    private fun loadDataFromUri(uri: Uri, isCsv: Boolean) {
         try {
-            val pairs = mutableListOf<Pair<String, String>>()
+            val rows = mutableListOf<List<String>>()
+            val delimiterRegex = if (isCsv) Regex(",") else Regex("[\\t\\s]+")
             contentResolver.openInputStream(uri)?.use { stream ->
                 BufferedReader(InputStreamReader(stream)).forEachLine { line ->
-                    val cols = line.split(",")
-                    val x = cols.firstOrNull()?.trim()?.toFloatOrNull()
-                    val y = cols.getOrNull(1)?.trim()?.toFloatOrNull()
-                    if (x != null && y != null) pairs.add(Pair(x.toString(), y.toString()))
+                    val trimmed = line.trim()
+                    if (trimmed.isNotEmpty()) {
+                        val tokens = trimmed.split(delimiterRegex).map { it.trim() }.filter { it.isNotEmpty() }
+                        if (tokens.size >= 2 && tokens.any { it.toFloatOrNull() != null }) {
+                            rows.add(tokens)
+                        }
+                    }
                 }
             }
-            if (pairs.isNotEmpty()) { populateEditableTable(pairs); plotAll() }
-        } catch (_: Exception) { Toast.makeText(this, "CSV read failed", Toast.LENGTH_SHORT).show() }
+            if (rows.isNotEmpty()) {
+                populateEditableTable(rows)
+                plotAll()
+                val msg = if (numColumns > 2) "Loaded $numColumns columns. Tap any 2 headers (X1..X$numColumns) to plot." else "Loaded ${rows.size} rows."
+                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, "No valid numeric columns found", Toast.LENGTH_SHORT).show()
+            }
+        } catch (_: Exception) {
+            Toast.makeText(this, "File read failed", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showExportDialog() {
         AlertDialog.Builder(this).setTitle("Export Graph As")
-            .setItems(arrayOf("PNG Image", "SVG Vector")) { _, which -> if (which == 0) savePng() else saveSvg() }
+            .setItems(arrayOf("PNG Image", "SVG Vector")) { _, which ->
+                promptFilenameAndExport(isPng = (which == 0))
+            }
             .show()
     }
 
-    private fun savePng() {
+    private fun promptFilenameAndExport(isPng: Boolean) {
+        val defaultName = "graph_${System.currentTimeMillis()}"
+        val input = EditText(this).apply {
+            setText(defaultName)
+            setSelection(defaultName.length)
+            hint = "Enter file name"
+        }
+        AlertDialog.Builder(this)
+            .setTitle(if (isPng) "Save PNG As" else "Save SVG As")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val rawName = input.text.toString().trim().ifEmpty { defaultName }
+                val cleanBase = rawName.removeSuffix(".png").removeSuffix(".svg")
+                    .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                if (isPng) savePng("$cleanBase.png") else saveSvg("$cleanBase.svg")
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun savePng(filename: String) {
         try {
-            val filename = "graph_${System.currentTimeMillis()}.png"
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, filename)
                 put(MediaStore.Images.Media.MIME_TYPE, "image/png")
@@ -384,11 +519,12 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) { Toast.makeText(this, "PNG export failed", Toast.LENGTH_SHORT).show() }
     }
 
-    private fun saveSvg() {
+    private fun saveSvg(filename: String) {
         try {
             val w = 800f; val h = 600f; val pad = 80f
             val plotW = w - 2 * pad; val plotH = h - 2 * pad
-            val yLo = lineChart.axisLeft.axisMinimum; val yHi = lineChart.axisLeft.axisMaximum
+            val yLo = lineChart.axisLeft.mAxisMinimum
+            val yHi = lineChart.axisLeft.mAxisMaximum
             val xLo = minX.toFloat(); val xHi = maxX.toFloat()
             fun mapX(x: Float) = pad + ((x - xLo) / (xHi - xLo).coerceAtLeast(0.001f)) * plotW
             fun mapY(y: Float) = h - pad - ((y - yLo) / (yHi - yLo).coerceAtLeast(0.001f)) * plotH
@@ -415,7 +551,6 @@ class MainActivity : AppCompatActivity() {
             }
             sb.append("</svg>")
 
-            val filename = "graph_${System.currentTimeMillis()}.svg"
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/svg+xml")

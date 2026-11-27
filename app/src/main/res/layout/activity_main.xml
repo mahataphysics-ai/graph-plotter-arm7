@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://android.com"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -69,41 +69,54 @@
                     android:orientation="horizontal"
                     android:background="#3E4451"
                     android:gravity="center_vertical"
+                    android:paddingVertical="2dp"
+                    android:paddingHorizontal="4dp"
                     android:layout_marginTop="4dp">
                     <Button
                         android:id="@+id/btnAddRow"
-                        android:layout_width="36dp"
-                        android:layout_height="32dp"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:padding="0dp"
+                        android:backgroundTint="#23272E"
                         android:text="+"
-                        android:textSize="14sp" />
+                        android:textColor="#4CAF50"
+                        android:textStyle="bold"
+                        android:textSize="18sp" />
                     <TextView
+                        android:id="@+id/tvColStatus"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:gravity="center"
-                        android:text="X"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="center"
-                        android:text="Y"
-                        android:textColor="#FFFFFF"
+                        android:text="X1 vs X2"
+                        android:textColor="#E0E6ED"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
                     <Button
                         android:id="@+id/btnDelRow"
-                        android:layout_width="36dp"
-                        android:layout_height="32dp"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:padding="0dp"
+                        android:backgroundTint="#23272E"
                         android:text="-"
-                        android:textSize="14sp" />
+                        android:textColor="#F44336"
+                        android:textStyle="bold"
+                        android:textSize="18sp" />
                 </LinearLayout>
-                <TableLayout
-                    android:id="@+id/tblCsvData"
+                <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:stretchColumns="*" />
+                    android:fillViewport="true">
+                    <TableLayout
+                        android:id="@+id/tblCsvData"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:stretchColumns="*" />
+                </HorizontalScrollView>
             </LinearLayout>
         </ScrollView>
 
