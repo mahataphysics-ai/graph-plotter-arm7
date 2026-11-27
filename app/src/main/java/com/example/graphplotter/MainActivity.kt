@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
         setContentView(R.layout.activity_main)
 
         lineChart = findViewById(R.id.lineChart)
@@ -102,6 +103,13 @@ class MainActivity : AppCompatActivity() {
             )
         )
         plotAll()
+        } catch (e: Throwable) {
+            AlertDialog.Builder(this)
+                .setTitle("Startup Error")
+                .setMessage(android.util.Log.getStackTraceString(e))
+                .setPositiveButton("OK", null)
+                .show()
+        }
     }
 
     private fun showImportMenu() {
