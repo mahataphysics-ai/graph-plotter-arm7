@@ -29,6 +29,8 @@ import net.objecthunter.exp4j.ExpressionBuilder
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Locale
+import kotlin.math.exp
+import kotlin.math.ln
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,11 +43,16 @@ class MainActivity : AppCompatActivity() {
     private var minY: Float? = null
     private var maxY: Float? = null
     private var gridEnabled = true
-    private var isScatterMode = false
+    private var lineDashed = false
+    private var dataLineWidth = 2.2f
+    private var dataLineColor = Color.RED
+    private var fitMode = 0
     private var lastFuncSets: List<List<Entry>> = emptyList()
     private var lastDataEntries: List<Entry> = emptyList()
 
     private val palette = listOf(Color.BLUE, Color.rgb(0, 150, 0), Color.MAGENTA, Color.rgb(255, 120, 0), Color.CYAN)
+    private val colorNames = arrayOf("Red", "Blue", "Green", "Black", "Magenta", "Orange", "Cyan")
+    private val colorValues = intArrayOf(Color.RED, Color.BLUE, Color.rgb(0, 150, 0), Color.BLACK, Color.MAGENTA, Color.rgb(255, 120, 0), Color.CYAN)
 
     private val csvPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { loadCsvFromUri(it) }
@@ -67,13 +74,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnText).setOnClickListener { showTextMenu() }
         findViewById<Button>(R.id.btnRange).setOnClickListener { showRangeMenu() }
         findViewById<Button>(R.id.btnGrid).setOnClickListener { showGridDialog() }
-
-        val btnCsvMode = findViewById<Button>(R.id.btnCsvMode)
-        btnCsvMode.setOnClickListener {
-            isScatterMode = !isScatterMode
-            btnCsvMode.text = if (isScatterMode) "CSV: Scatter" else "CSV: Line"
-            plotAll()
-        }
+        findViewById<Button>(R.id.btnType).setOnClickListener { showTypeMenu() }
+        findViewById<Button>(R.id.btnStyle).setOnClickListener { showStyleMenu() }
+        findViewById<Button>(R.id.btnFit).setOnClickListener { showFitMenu() }
 
         lineChart.setBackgroundColor(Color.WHITE)
         lineChart.xAxis.position = XAxis.XAxisPosition.BOTTOM
@@ -81,6 +84,7 @@ class MainActivity : AppCompatActivity() {
         lineChart.axisRight.setDrawLabels(false)
         lineChart.axisRight.setDrawGridLines(false)
         lineChart.description.isEnabled = false
+        lineChart.applyFontSettings()
 
         populateEditableTable(listOf(Pair("-6", "2"), Pair("-2", "-3"), Pair("1", "4"), Pair("5", "1")))
         plotAll()
@@ -108,17 +112,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLegendDialog() {
-        val opts = arrayOf("Show (Bottom)", "Show (Top Right)", "Hide Legend")
-        AlertDialog.Builder(this).setTitle("Key (Legend)").setItems(opts) { _, which ->
-            lineChart.legend.isEnabled = which != 2
-            if (which == 0) {
-                lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM
-                lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.LEFT
-                lineChart.legend.setDrawInside(false)
-            } else if (which == 1) {
-                lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.TOP
-                lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT
-                lineChart.legend.setDrawInside(true)
+        val opts = arrayOf("Top Left (Inside)", "Top Right (Inside)", "Bottom Left (Inside)", "Bottom Right (Inside)", "Hide Legend")
+        AlertDialog.Builder(this).setTitle("Key (Legend) Position").setItems(opts) { _, which ->
+            lineChart.legend.isEnabled = which != 4
+            lineChart.legend.setDrawInside(true)
+            when (which) {
+                0 -> { lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.TOP; lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.LEFT }
+                1 -> { lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.TOP; lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT }
+                2 -> { lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM; lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.LEFT }
+                3 -> { lineChart.legend.verticalAlignment = Legend.LegendVerticalAlignment.BOTTOM; lineChart.legend.horizontalAlignment = Legend.LegendHorizontalAlignment.RIGHT }
             }
             lineChart.invalidate()
         }.show()
@@ -127,40 +129,56 @@ class MainActivity : AppCompatActivity() {
     private fun showFontDialog() {
         val fonts = arrayOf("Default (Sans)", "Serif", "Monospace")
         AlertDialog.Builder(this).setTitle("Select Font").setItems(fonts) { _, which ->
-            lineChart.customTypeface = when (which) {
-                1 -> Typeface.SERIF
-                2 -> Typeface.MONOSPACE
-                else -> Typeface.SANS_SERIF
-            }
+            lineChart.customTypeface = when (which) { 1 -> Typeface.SERIF; 2 -> Typeface.MONOSPACE; else -> Typeface.SANS_SERIF }
             lineChart.applyFontSettings()
         }.show()
     }
 
     private fun showFontSizeDialog() {
-        val input = EditText(this).apply {
-            setText(lineChart.baseFontSizeSp.toString())
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        }
+        val input = EditText(this).apply { setText(lineChart.baseFontSizeSp.toString()); inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
         AlertDialog.Builder(this).setTitle("Font Size (sp)").setView(input)
-            .setPositiveButton("Apply") { _, _ ->
-                input.text.toString().toFloatOrNull()?.let {
-                    lineChart.baseFontSizeSp = it.coerceIn(8f, 24f)
-                    lineChart.applyFontSettings()
-                }
-            }.setNegativeButton("Cancel", null).show()
+            .setPositiveButton("Apply") { _, _ -> input.text.toString().toFloatOrNull()?.let { lineChart.baseFontSizeSp = it.coerceIn(8f, 24f); lineChart.applyFontSettings() } }
+            .setNegativeButton("Cancel", null).show()
     }
 
     private fun showRangeMenu() {
-        AlertDialog.Builder(this).setTitle("Select Axis Range").setItems(arrayOf("X Range", "Y Range")) { _, which ->
-            showRangeDialog(which == 0)
-        }.show()
+        AlertDialog.Builder(this).setTitle("Select Axis Range").setItems(arrayOf("X Range", "Y Range")) { _, which -> showRangeDialog(which == 0) }.show()
     }
 
     private fun showGridDialog() {
-        AlertDialog.Builder(this).setTitle("Grid Lines").setItems(arrayOf("Grid ON", "Grid OFF")) { _, which ->
-            gridEnabled = (which == 0)
-            plotAll()
+        AlertDialog.Builder(this).setTitle("Grid Lines").setItems(arrayOf("Grid ON", "Grid OFF")) { _, which -> gridEnabled = (which == 0); plotAll() }.show()
+    }
+
+    private fun showTypeMenu() {
+        val types = arrayOf("Points / Scatter", "Line", "LinePoints", "Box / Bar", "Histogram")
+        AlertDialog.Builder(this).setTitle("Plot Type").setItems(types) { _, which -> lineChart.plotType = which; plotAll() }.show()
+    }
+
+    private fun showStyleMenu() {
+        val items = arrayOf("1. Marker Type", "2. Marker Size", "3. Marker Color", "4. Line Type", "5. Line Width", "6. Line Color")
+        AlertDialog.Builder(this).setTitle("Plot Style").setItems(items) { _, which ->
+            when (which) {
+                0 -> AlertDialog.Builder(this).setTitle("Marker Type")
+                    .setItems(arrayOf("Dot (1px)", "Plus (+)", "Asterisk (*)", "Filled Circle", "Open Circle")) { _, m -> lineChart.markerType = m; plotAll() }.show()
+                1 -> showNumberDialog("Marker Size (1-15)", lineChart.markerSize) { lineChart.markerSize = it.coerceIn(1f, 15f); plotAll() }
+                2 -> AlertDialog.Builder(this).setTitle("Marker Color").setItems(colorNames) { _, c -> lineChart.markerColor = colorValues.get(c); plotAll() }.show()
+                3 -> AlertDialog.Builder(this).setTitle("Line Type").setItems(arrayOf("Solid", "Dash-Dot")) { _, l -> lineDashed = (l == 1); plotAll() }.show()
+                4 -> showNumberDialog("Line Width (0.5-10)", dataLineWidth) { dataLineWidth = it.coerceIn(0.5f, 10f); plotAll() }
+                5 -> AlertDialog.Builder(this).setTitle("Line Color").setItems(colorNames) { _, c -> dataLineColor = colorValues.get(c); plotAll() }.show()
+            }
         }.show()
+    }
+
+    private fun showFitMenu() {
+        val fits = arrayOf("None (Clear Fit)", "Linear Fit (y = mx + c)", "Quadratic Fit (y = ax² + bx + c)", "Exponential Fit (y = a·e^(bx))")
+        AlertDialog.Builder(this).setTitle("Curve Fit Scatter Data").setItems(fits) { _, which -> fitMode = which; plotAll() }.show()
+    }
+
+    private fun showNumberDialog(title: String, current: Float, onSave: (Float) -> Unit) {
+        val input = EditText(this).apply { setText(current.toString()); inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }
+        AlertDialog.Builder(this).setTitle(title).setView(input)
+            .setPositiveButton("Apply") { _, _ -> input.text.toString().toFloatOrNull()?.let(onSave) }
+            .setNegativeButton("Cancel", null).show()
     }
 
     private fun showRangeDialog(isX: Boolean) {
@@ -205,6 +223,7 @@ class MainActivity : AppCompatActivity() {
                 funcLists.add(entries)
                 dataSets.add(LineDataSet(entries, "f${idx + 1}(x)=$eq").apply {
                     color = palette.get(idx % palette.size); setDrawCircles(false); lineWidth = 2.2f
+                    if (lineDashed) enableDashedLine(18f, 8f, 0f)
                 })
             } catch (_: Exception) { Toast.makeText(this, "Invalid: $eq", Toast.LENGTH_SHORT).show() }
         }
@@ -212,20 +231,45 @@ class MainActivity : AppCompatActivity() {
 
         val entries = readEditableTableEntries()
         lastDataEntries = entries
+        lineChart.customDataPoints = entries
+        lineChart.histogramBins = emptyList()
 
         if (entries.isNotEmpty()) {
-            dataSets.add(LineDataSet(entries, if (isScatterMode) "Data (Scatter)" else "Data (Line)").apply {
-                color = if (isScatterMode) Color.TRANSPARENT else Color.RED
-                setCircleColor(Color.RED); setDrawCircles(true)
-                circleRadius = if (isScatterMode) 5.5f else 4.5f
-                lineWidth = if (isScatterMode) 0f else 1.8f
-            })
+            when (lineChart.plotType) {
+                0 -> dataSets.add(LineDataSet(entries, "Scatter").apply { color = Color.TRANSPARENT; setDrawCircles(false) })
+                1, 2 -> dataSets.add(LineDataSet(entries, if (lineChart.plotType == 1) "Data Line" else "LinePoints").apply {
+                    color = dataLineColor; setDrawCircles(false); lineWidth = dataLineWidth
+                    if (lineDashed) enableDashedLine(18f, 8f, 0f)
+                })
+                3 -> dataSets.add(LineDataSet(entries, "Box/Bar").apply { color = Color.TRANSPARENT; setDrawCircles(false) })
+                4 -> {
+                    val ys = entries.map { it.y }
+                    val lo = ys.minOrNull() ?: 0f; val hi = ys.maxOrNull() ?: 1f
+                    val bins = 5; val bw = ((hi - lo) / bins).coerceAtLeast(0.5f)
+                    val counts = (0 until bins).map { b ->
+                        val c = lo + (b + 0.5f) * bw
+                        val cnt = ys.count { it >= lo + b * bw && (b == bins - 1 || it < lo + (b + 1) * bw) }.toFloat()
+                        Pair(c, cnt)
+                    }
+                    lineChart.binWidth = bw; lineChart.histogramBins = counts
+                    val dummy = counts.flatMap { listOf(Entry(it.first - bw / 2f, 0f), Entry(it.first + bw / 2f, it.second)) }
+                    dataSets.add(LineDataSet(dummy, "Histogram").apply { color = Color.TRANSPARENT; setDrawCircles(false) })
+                }
+            }
+            computeFit(entries)?.let { (fitPts, label) ->
+                dataSets.add(LineDataSet(fitPts, label).apply {
+                    color = Color.DKGRAY; setDrawCircles(false); lineWidth = 2.4f; enableDashedLine(14f, 8f, 0f)
+                })
+            }
         }
 
         lineChart.xAxis.setDrawGridLines(gridEnabled)
         lineChart.axisLeft.setDrawGridLines(gridEnabled)
-        lineChart.xAxis.axisMinimum = minX.toFloat()
-        lineChart.xAxis.axisMaximum = maxX.toFloat()
+        if (lineChart.plotType != 4) {
+            lineChart.xAxis.axisMinimum = minX.toFloat(); lineChart.xAxis.axisMaximum = maxX.toFloat()
+        } else {
+            lineChart.xAxis.resetAxisMinimum(); lineChart.xAxis.resetAxisMaximum()
+        }
         if (minY != null && maxY != null) {
             lineChart.axisLeft.axisMinimum = minY!!; lineChart.axisLeft.axisMaximum = maxY!!
         } else {
@@ -233,6 +277,42 @@ class MainActivity : AppCompatActivity() {
         }
         lineChart.data = LineData(dataSets.toList())
         lineChart.invalidate()
+    }
+
+    private fun computeFit(pts: List<Entry>): Pair<List<Entry>, String>? {
+        if (fitMode == 0 || pts.size < 2) return null
+        val xLo = pts.minOf { it.x }.toDouble(); val xHi = pts.maxOf { it.x }.toDouble()
+        val step = ((xHi - xLo) / 100.0).coerceAtLeast(0.05)
+        val n = pts.size.toDouble()
+        if (fitMode == 1) {
+            val sx = pts.sumOf { it.x.toDouble() }; val sy = pts.sumOf { it.y.toDouble() }
+            val sxx = pts.sumOf { it.x.toDouble() * it.x }; val sxy = pts.sumOf { it.x.toDouble() * it.y }
+            val denom = n * sxx - sx * sx; if (denom == 0.0) return null
+            val m = (n * sxy - sx * sy) / denom; val c = (sy - m * sx) / n
+            val curve = generateSequence(xLo) { it + step }.takeWhile { it <= xHi }.map { Entry(it.toFloat(), (m * it + c).toFloat()) }.toList()
+            return Pair(curve, String.format(Locale.US, "Fit: %.2fx+%.2f", m, c))
+        } else if (fitMode == 2 && pts.size >= 3) {
+            val sx = pts.sumOf { it.x.toDouble() }; val sx2 = pts.sumOf { Math.pow(it.x.toDouble(), 2.0) }
+            val sx3 = pts.sumOf { Math.pow(it.x.toDouble(), 3.0) }; val sx4 = pts.sumOf { Math.pow(it.x.toDouble(), 4.0) }
+            val sy = pts.sumOf { it.y.toDouble() }; val sxy = pts.sumOf { it.x.toDouble() * it.y }
+            val sx2y = pts.sumOf { Math.pow(it.x.toDouble(), 2.0) * it.y }
+            val d = n * (sx2 * sx4 - sx3 * sx3) - sx * (sx * sx4 - sx2 * sx3) + sx2 * (sx * sx3 - sx2 * sx2)
+            if (d == 0.0) return null
+            val c = (sy * (sx2 * sx4 - sx3 * sx3) - sx * (sxy * sx4 - sx3 * sx2y) + sx2 * (sxy * sx3 - sx2 * sx2y)) / d
+            val b = (n * (sxy * sx4 - sx3 * sx2y) - sy * (sx * sx4 - sx2 * sx3) + sx2 * (sx * sx2y - sxy * sx2)) / d
+            val a = (n * (sx2 * sx2y - sx3 * sxy) - sx * (sx * sx2y - sx2 * sxy) + sy * (sx * sx3 - sx2 * sx2)) / d
+            val curve = generateSequence(xLo) { it + step }.takeWhile { it <= xHi }.map { Entry(it.toFloat(), (a * it * it + b * it + c).toFloat()) }.toList()
+            return Pair(curve, String.format(Locale.US, "Fit: %.2fx²+%.2fx+%.2f", a, b, c))
+        } else if (fitMode == 3) {
+            val pos = pts.filter { it.y > 0f }; if (pos.size < 2) return null
+            val mN = pos.size.toDouble(); val sx = pos.sumOf { it.x.toDouble() }; val sly = pos.sumOf { ln(it.y.toDouble()) }
+            val sxx = pos.sumOf { it.x.toDouble() * it.x }; val sxly = pos.sumOf { it.x.toDouble() * ln(it.y.toDouble()) }
+            val denom = mN * sxx - sx * sx; if (denom == 0.0) return null
+            val b = (mN * sxly - sx * sly) / denom; val a = exp((sly - b * sx) / mN)
+            val curve = generateSequence(xLo) { it + step }.takeWhile { it <= xHi }.map { Entry(it.toFloat(), (a * exp(b * it)).toFloat()) }.toList()
+            return Pair(curve, String.format(Locale.US, "Fit: %.2fe^(%.2fx)", a, b))
+        }
+        return null
     }
 
     private fun populateEditableTable(rows: List<Pair<String, String>>) {
@@ -254,10 +334,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun deleteLastRow() {
-        if (tblCsvData.childCount > 0) {
-            tblCsvData.removeViewAt(tblCsvData.childCount - 1)
-            plotAll()
-        }
+        if (tblCsvData.childCount > 0) { tblCsvData.removeViewAt(tblCsvData.childCount - 1); plotAll() }
     }
 
     private fun readEditableTableEntries(): List<Entry> {
@@ -328,11 +405,13 @@ class MainActivity : AppCompatActivity() {
                 if (d.isNotEmpty()) sb.append("""<polyline fill="none" stroke="${colors.get(i % colors.size)}" stroke-width="2.5" points="$d"/>""")
             }
             if (lastDataEntries.isNotEmpty()) {
-                if (!isScatterMode) {
+                if (lineChart.plotType == 1 || lineChart.plotType == 2) {
                     val d = lastDataEntries.joinToString(" ") { String.format(Locale.US, "%.1f,%.1f", mapX(it.x), mapY(it.y)) }
-                    sb.append("""<polyline fill="none" stroke="red" stroke-width="2" points="$d"/>""")
+                    sb.append("""<polyline fill="none" stroke="red" stroke-width="$dataLineWidth" points="$d"/>""")
                 }
-                lastDataEntries.forEach { sb.append(String.format(Locale.US, """<circle cx="%.1f" cy="%.1f" r="4.5" fill="red"/>""", mapX(it.x), mapY(it.y))) }
+                if (lineChart.plotType == 0 || lineChart.plotType == 2) {
+                    lastDataEntries.forEach { sb.append(String.format(Locale.US, """<circle cx="%.1f" cy="%.1f" r="${lineChart.markerSize}" fill="red"/>""", mapX(it.x), mapY(it.y))) }
+                }
             }
             sb.append("</svg>")
 

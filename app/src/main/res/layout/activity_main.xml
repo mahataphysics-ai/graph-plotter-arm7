@@ -144,10 +144,22 @@
                     android:text="GRID"
                     android:textSize="11sp" />
                 <Button
-                    android:id="@+id/btnCsvMode"
+                    android:id="@+id/btnType"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="CSV: Line"
+                    android:text="TYPE"
+                    android:textSize="11sp" />
+                <Button
+                    android:id="@+id/btnStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="STYLE"
+                    android:textSize="11sp" />
+                <Button
+                    android:id="@+id/btnFit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="FIT"
                     android:textSize="11sp" />
             </LinearLayout>
         </ScrollView>
